@@ -43,7 +43,7 @@ class PhotonicFaceRecognition(SettingConfig):
             with shape (128,) by txt file in TXT_FILE_DIR in `config/inference.json`.
         
         Args:
-            + txt_file_dir (string): directory of emmbedded vector txt files.
+            + txt_file_dir (string): Directory of emmbedded vector txt files.
             + known_face_names (list(string)): List with length = N, contains all lable name 
                                                in CLASSES in `config/inference.json`.
             
@@ -61,20 +61,34 @@ class PhotonicFaceRecognition(SettingConfig):
         return known_face_encodings
     
     def down_scale_image(self, input_image, down_scale=4):
-        # Resize frame of video to 1/4 size for faster face recognition processing
-        small_input_image = cv2.resize(input_image, (0, 0), fx=0.25, fy=0.25)
+        '''Resize frame of video to 1/down_scale size for faster face recognition processing
+        Args:
+            + input_image (ndarray): Image array with shape (H, C, 3) with 3 represent to RGB.
+                                     If use OpenCV to read image, you must convert from BGR to RGB before.
+            + down_scale (int): Down scale value, the image is down scaled with 1/down_scale.
+
+        Return:
+            + small_input_image (ndarray): Image after down scale.
+        '''
+        small_input_image = cv2.resize(input_image, (0, 0), fx=1/down_scale, fy=1/down_scale)
 
         return small_input_image
     
+    def load_ground_truth_image(self, ground_truth_image):
+        return face_recognition.load_image_file(os.path.join(self.IMAGE_PATH, ground_truth_image))
+
     def face_recognition_algorithm(self, face_encodings, known_face_encodings, known_face_names, threshold):
         ''' Face recognition algorithm to recognize all face names object in individual image.
         Args:
-            + face_encodings (list(array)): list with length = M (M is number of face object in image) contains 
+            + face_encodings (list(array)): List with length = M (M is number of face object in image) contains 
                                             M 128D embedded vectors.
             + known_face_encodings (list(ndarray)).
             + known_face_names (list(string)).
             + threshold (float): Threshold of algorithm. If use l2/l1 norm it's tolerance.
             + method (string): l2_norm by default.
+        
+        Return:
+            + face_names (list(string)): List contain all predictive name in image.
         '''
 
         face_names = []
@@ -86,6 +100,16 @@ class PhotonicFaceRecognition(SettingConfig):
         return face_names
     
     def face_recognition_drawning(self, input_image, face_locations, face_names, down_scale=4):
+        '''Drawing rectangle and predictive name `pred_name` in input image
+        Args: 
+            + input_image (ndarray): Image array with shape (H, C, 3) with 3 represent to RGB.
+                                     If use OpenCV to read image, you must convert from BGR to RGB before.
+            + face_locations (list(ndarray)): List contains all offset value (top, right, bottom, left) of face locations in image.
+            + face_names (list(string)): List contain all predive name of face objects in image. The oder corresponding to face_locations.
+            + down_scale (int): Down scale value. It is down scale value in `down_scale_image` method. 
+                                It use to revese offset value with correct with original image.
+        '''
+
         for (top, right, bottom, left), name in zip(face_locations, face_names):
             if down_scale:
                 # Scale back up face locations since the frame we detected in was scaled to 1/down_scale size
@@ -102,27 +126,37 @@ class PhotonicFaceRecognition(SettingConfig):
             font = cv2.FONT_HERSHEY_DUPLEX
             cv2.putText(input_image, name, (left + 6, bottom - 6), font, 1.0, (255, 255, 255), 1)
 
-        return input_image
-
-    def face_encoding_algorithm(self, input_image):
-        ''' Face encoding algorithm to encoding all face object in individual image
-        Args:
-            + input_image (ndarray): image array with shape (H, C, 3) with 3 represent to RGB.
+    def face_detection_algorithm(self, input_image):
+        ''' Face detection algorithm
+        Args: 
+            + input_image (ndarray): Image array with shape (H, C, 3) with 3 represent to RGB.
                                      If use OpenCV to read image, you must convert from BGR to RGB before.
         
-        return:
-            + face_encodings (list(array)): list with length = M (M is number of face object in image) contains 
-                                            M 128D embedded vectors.
+        Returns:
+            + face_locations (list(ndarray)): List contains all offset value (top, right, bottom, left) of face locations in image.
         '''
-
         # Applied HOG + SVM to face detection in image.
         face_locations = face_recognition.face_locations(input_image)
+        
+        return face_locations
+
+    def face_encoding_algorithm(self, input_image, face_locations):
+        ''' Face encoding algorithm to encoding all face object in individual image
+        Args:
+            + input_image (ndarray): Image array with shape (H, C, 3) with 3 represent to RGB.
+                                     If use OpenCV to read image, you must convert from BGR to RGB before.
+            + + face_locations (list(ndarray)): List contains all offset value (top, right, bottom, left) of face locations in image.
+        
+        return:
+            + face_encodings (list(array)): List with length = M (M is number of face object in image) contains 
+                                            M 128D embedded vectors.
+        '''
 
         # Applied dlib_face_recognition_resnet_model_v1 to encoding face object in image.
         # https://github.com/davisking/dlib-models#dlib_face_recognition_resnet_model_v1datbz2
         face_encodings = face_recognition.face_encodings(input_image, face_locations)
 
-        return face_encodings, face_locations
+        return face_encodings
 
     def similarity_algorithm(self, known_face_encodings, known_face_names, face_encoding, threshold, method="l2_norm"):
         ''' Similarity algorithm to calculate the similarity score of each object in image.
@@ -163,4 +197,40 @@ class PhotonicFaceRecognition(SettingConfig):
             pred_name = "Unknown"
         
         return pred_name
+    
+    def face_detection_drawing(self, input_image, face_locations, down_scale=4):
+        image_h, image_w = input_image.shape[:2]
+        flag = "Invalid"
+        for (top, right, bottom, left) in face_locations:
+            if down_scale:
+                # Scale back up face locations since the frame we detected in was scaled to 1/down_scale size
+                top *= down_scale
+                right *= down_scale
+                bottom *= down_scale
+                left *= down_scale
+
+            # Draw a box around the face
+            cv2.rectangle(input_image, (left, top), (right, bottom), (0, 0, 255), 2)
+
+            # Draw a label with a name below the face
+            cv2.rectangle(input_image, (left, bottom - 35), (right, bottom), (0, 0, 255), cv2.FILLED)
+            font = cv2.FONT_HERSHEY_DUPLEX
+            cv2.putText(input_image, "Human face", (left + 6, bottom - 6), font, 1.0, (255, 255, 255), 1)
+
+            # Draw a rectangle that will be splited and save it into database
+            top -= 60
+            right += 60
+            bottom += 60
+            left -= 60 
+
+            if (top < 0) | (left < 0) | (right > image_w) | (bottom > image_h):
+                flag = "Incorrect"
+            else:
+                flag = "Correct"
+            cv2.rectangle(input_image, (left, top), (right, bottom), (255, 0, 0), 2)
+            cv2.rectangle(input_image, (left, top - 35), (right, top), (255, 0, 0), cv2.FILLED)
+            cv2.putText(input_image, flag, (left + 6, top - 6), font, 1.0, (255, 255, 255), 1)
+
+        return flag
+
     

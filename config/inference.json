@@ -1,12 +1,1 @@
-{
-    "IMAGE_PATH": "./face-image-samples",
-    "CLASSES": [
-        "Nathan Ngo",
-        "Nhat Minh",
-        "Kim Jisoo"
-    ],
-    "TXT_FILE_DIR" : "face-embedded-vector",
-    "TOLERANCE": 0.5,
-    "METHOD_SIMILARITY" : "l2_norm",
-    "DOWN_SCALE" : 4
-}
+{"IMAGE_PATH": "./face-image-samples", "CLASSES": ["Nathan Ngo", "Kim Jisoo"], "UPDATE_DATABASES": false, "TXT_FILE_DIR": "face-embedded-vector", "TOLERANCE": 0.5, "METHOD_SIMILARITY": "l2_norm", "DOWN_SCALE": 4}
