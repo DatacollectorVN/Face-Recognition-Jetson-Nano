@@ -135,6 +135,7 @@ class PhotonicFaceRecognition(SettingConfig):
         Returns:
             + face_locations (list(ndarray)): List contains all offset value (top, right, bottom, left) of face locations in image.
         '''
+
         # Applied HOG + SVM to face detection in image.
         face_locations = face_recognition.face_locations(input_image)
         
@@ -199,6 +200,10 @@ class PhotonicFaceRecognition(SettingConfig):
         return pred_name
     
     def face_detection_drawing(self, input_image, face_locations, down_scale=4):
+        ''' Drawing face detection (red rectange) and splitted image (blue rectangle).
+            This function is applied for `Add new student` event.
+        '''
+        
         image_h, image_w = input_image.shape[:2]
         flag = "Invalid"
         for (top, right, bottom, left) in face_locations:

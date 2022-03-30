@@ -64,7 +64,7 @@ def draw_fps_opencv(frame, fps):
     return frame
 
 def add_new_student_opencv(photonic_face_recognition, params):
-    '''function is used for add new student event'''
+    '''function is used for `Add new student` event'''
 
     name_student = input("Please enter name of new student: ")
     params["CLASSES"].append(name_student)
@@ -134,7 +134,7 @@ def add_new_student_opencv(photonic_face_recognition, params):
     cv2.destroyAllWindows()
 
 def check_attendance_opencv(photonic_face_recognition, params):
-    '''Function is used for check attendance envent'''
+    '''Function is used for `Check attendance` envent'''
 
     # Load avaiable instances in dataset.
     known_face_names = params["CLASSES"]
