@@ -70,6 +70,7 @@ class PhotonicFaceRecognition(SettingConfig):
         Return:
             + small_input_image (ndarray): Image after down scale.
         '''
+        
         small_input_image = cv2.resize(input_image, (0, 0), fx=1/down_scale, fy=1/down_scale)
 
         return small_input_image
@@ -203,7 +204,7 @@ class PhotonicFaceRecognition(SettingConfig):
         ''' Drawing face detection (red rectange) and splitted image (blue rectangle).
             This function is applied for `Add new student` event.
         '''
-        
+
         image_h, image_w = input_image.shape[:2]
         flag = "Invalid"
         for (top, right, bottom, left) in face_locations:
