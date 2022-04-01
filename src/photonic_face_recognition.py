@@ -71,7 +71,7 @@ class PhotonicFaceRecognition(SettingConfig):
             + small_input_image (ndarray): Image after down scale.
         '''
         
-        small_input_image = cv2.resize(input_image, (0, 0), fx=1/down_scale, fy=1/down_scale)
+        small_input_image = cv2.resize(input_image, (0, 0), fx = 1/down_scale, fy = 1/down_scale)
 
         return small_input_image
     

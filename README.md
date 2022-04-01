@@ -1,31 +1,28 @@
-# Face-Recognition-Jetson-Nano
-This our project in Bio-Photonic class at BME - International University - VNU.
+# Face-Recognition-Jetson-Nano (*Status: updating*)
+This our project in Bio-Photonic class at **BME - International University - VNU**.
 
-[Slide](https://docs.google.com/presentation/d/1ubix9-0_nUYJHcTf9s-gZwm7NsP12SqhFFAGRUtJUmE/edit?usp=sharing) presentation this week
+## 1. Project Architecture
 
-# Setup requirements
-## 1. Macos (M1)
-### Prerequirements
-+ Install [HomeBrew](https://brew.sh).
-+ Install [Conda](https://docs.conda.io/en/latest/miniconda.html).
+### 1.1. Schematic
+![plot](public-imgs/schematic.png)
 
-### Setup environment for dlib
+### 1.2. Repository
+Our structure of this repository:
+![plot](public-imgs/structure_repo.png)
 
-```bash
-brew install xquartz --cask
-brew install gtk+3 boost
-brew install boost-python3
-brew install cmake
-```
-### Create virtual environment
-```bash
-conda create -n photonic python=3.9 -y
-conda actiavte photonic
-pip install -r requirements.txt
-```
+### 1.3. How our **Face Recognition** work
+In this project, we used [dlib]("http://dlib.net/")'s state-of-the-art face recognition built with deep learning and follwed open source of [ageitgey]("https://github.com/ageitgey/face_recognition") to setup enviroments.
 
-*Note:* In Mac M1 can create 2 python version (3.8 and 3.9), when we used python3.8 then `import dlib` in python file, we got the error `ImportError: dlopen - symbol not found in flat namespace`. But when we changed python3.9 the problems was resolved.
-## 2. Jetson-Nano
+![plot](public-imgs/face_recognition.png)
+
+For more understand, read our [document]("https://docs.google.com/presentation/d/1ubix9-0_nUYJHcTf9s-gZwm7NsP12SqhFFAGRUtJUmE/edit?usp=sharing").
+
+## Setup 
+Click [here](setup/README.md) for following our steps for setup this project.
+
+
+
+
 
 
 
