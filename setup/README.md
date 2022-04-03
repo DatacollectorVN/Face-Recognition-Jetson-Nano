@@ -56,3 +56,21 @@ conda create -n photonic python=3.9 -y
 conda actiavte photonic
 pip install -r requirements.txt
 ```
+
+### 3. Windows
+#### Create virtual environment
+```bash
+conda create -n photonic python=3.9 -y
+conda actiavte photonic
+```
+
+#### Install dlib and requirement packages
+If cmake is not installed then first install it using following command
+```bash
+pip install cmake
+```
+And then install dlib and requirements
+```bash
+conda install -c conda-forge dlib 
+pip install -r  requirements.txt
+```
