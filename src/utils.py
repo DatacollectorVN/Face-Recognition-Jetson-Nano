@@ -4,6 +4,7 @@ import os
 import cv2
 import time
 import sys
+import platform
 import tkinter as tk
 import cv2
 from PIL import Image, ImageTk
@@ -328,3 +329,33 @@ def check_attendance_opencv(photonic_face_recognition, params):
     # Release handle to the webcam
     video_capture.release()
     cv2.destroyAllWindows()
+
+### JETSON NANO CONFIGURE
+def running_on_jetson_nano():
+    # To make the same code work on a laptop or on a Jetson Nano, we'll detect when we are running on the Nano
+    # so that we can access the camera correctly in that case.
+    # On a normal Intel laptop, platform.machine() will be "x86_64" instead of "aarch64"
+    return platform.machine() == "aarch64"
+
+def get_jetson_gstreamer_source(capture_width=1280, capture_height=720, display_width=1280, display_height=720, framerate=60, flip_method=0):
+    """
+    Return an OpenCV-compatible video source description that uses gstreamer to capture video from the camera on a Jetson Nano
+    """
+    return (
+            f'nvarguscamerasrc ! video/x-raw(memory:NVMM), ' +
+            f'width=(int){capture_width}, height=(int){capture_height}, ' +
+            f'format=(string)NV12, framerate=(fraction){framerate}/1 ! ' +
+            f'nvvidconv flip-method={flip_method} ! ' +
+            f'video/x-raw, width=(int){display_width}, height=(int){display_height}, format=(string)BGRx ! ' +
+            'videoconvert ! video/x-raw, format=(string)BGR ! appsink'
+            )
+
+def video_capture_mul_platform():
+    if running_on_jetson_nano():
+        # Accessing the camera with OpenCV on a Jetson Nano requires gstreamer with a custom gstreamer source string
+        video_capture = cv2.VideoCapture(get_jetson_gstreamer_source(), cv2.CAP_GSTREAMER)
+    else:
+        # Accessing the camera with OpenCV on a laptop just requires passing in the number of the webcam (usually 0)
+        video_capture = cv2.VideoCapture(0)
+    
+    return video_capture
