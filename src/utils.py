@@ -216,7 +216,7 @@ def add_new_student_opencv(photonic_face_recognition, params):
     # setup 
     prev_frame_time = 0
     new_frame_time = 0
-    video_capture = cv2.VideoCapture(0)
+    video_capture = video_capture_mul_platform()
     process_this_frame = True
     while True:
         # Grab a single frame of video
@@ -287,8 +287,9 @@ def check_attendance_opencv(photonic_face_recognition, params):
     # setup 
     prev_frame_time = 0
     new_frame_time = 0
-    video_capture = cv2.VideoCapture(0)
-    process_this_frame = True
+    video_capture = video_capture_mul_platform()
+    patiences = params["PATIENCES"]
+    i = patiences
     while True:
         # Grab a single frame of video
         _, frame = video_capture.read()
@@ -299,15 +300,16 @@ def check_attendance_opencv(photonic_face_recognition, params):
         # convert frame to RGB
         rgb_small_frame = small_frame[:, :, ::-1]
 
-        # Apply trick to increase FPS
-        if process_this_frame:
+        if (i == patiences):
+            # process_this_frame
             face_locations = photonic_face_recognition.face_detection_algorithm(rgb_small_frame)
             face_encodings = photonic_face_recognition.face_encoding_algorithm(rgb_small_frame, face_locations)
             face_names = photonic_face_recognition.face_recognition_algorithm(face_encodings, known_face_encodings, 
                                                                               known_face_names, params["TOLERANCE"])
-        
-        # turn flag of process frame, mean if first frame is processed, second frame is not, third frame is processed, etc.
-        process_this_frame = not process_this_frame
+            # reset value of i
+            i = 1
+        else:
+            i += 1
 
         # Draw frame
         photonic_face_recognition.face_recognition_drawning(frame, face_locations, face_names, params["DOWN_SCALE"])
@@ -337,7 +339,7 @@ def running_on_jetson_nano():
     # On a normal Intel laptop, platform.machine() will be "x86_64" instead of "aarch64"
     return platform.machine() == "aarch64"
 
-def get_jetson_gstreamer_source(capture_width=1280, capture_height=720, display_width=1280, display_height=720, framerate=60, flip_method=0):
+def get_jetson_gstreamer_source(capture_width=1280, capture_height=720, display_width=1280, display_height=720, framerate=60, flip_method=1):
     """
     Return an OpenCV-compatible video source description that uses gstreamer to capture video from the camera on a Jetson Nano
     """
