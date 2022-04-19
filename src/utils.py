@@ -3,150 +3,9 @@ import json
 import os
 import cv2
 import time
-import sys
-import tkinter as tk
+import platform
 import cv2
-from PIL import Image, ImageTk
 
-class MyVideoCapture:
-     def __init__(self, video_source=0):
-         # Open the video source
-         self.vid = cv2.VideoCapture(video_source)
-         if not self.vid.isOpened():
-             raise ValueError("Unable to open video source", video_source)
- 
-         # Get video source width and height
-         self.width = int(self.vid.get(cv2.CAP_PROP_FRAME_WIDTH))
-         self.height = int(self.vid.get(cv2.CAP_PROP_FRAME_HEIGHT))
- 
-     def get_frame(self):
-         if self.vid.isOpened():
-             ret, frame = self.vid.read()
-             if ret:
-                 # Return a boolean success flag and the current frame converted to BGR
-                 return (ret, cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
-             else:
-                 return (ret, None)
-         else:
-             return (ret, None)
- 
-     # Release the video source when the object is destroyed
-     def __del__(self):
-         if self.vid.isOpened():
-             self.vid.release()
-
-class FaceRecognitionTkinter:
-    """Class use for graphical user interface (GUI) by using Tkinter library. 
-    Include 3 functions (state: Updating):
-    - show_camera (Add user) -> snapshot_clicked
-    - check_attendance
-
-    Args:
-    - window <object>: object of Tkinter
-    - entry_input_name <string>: name of user
-    - photonic_face_recognition <object>: object of PhotonicFaceRecognition class
-    - params <dict>: parameters json format
-    - FILE_CONFIG <string>: path of config file
-    """
-    def __init__(self, window, entry_input_name, photonic_face_recognition, params, FILE_CONFIG):
-        self.window = window
-        self.file_config = FILE_CONFIG
-        self.photonic_face_recognition = photonic_face_recognition
-        self.user = entry_input_name
-        self.params = params
-        self.process_this_frame = True
-        self.video_capture = MyVideoCapture(0)
-        if self.user is not None:
-            self.params["CLASSES"].append(self.user)
-
-        
-    def snapshot_clicked(self):
-        """Auto save face image and encode. Then add user into parameter CLASSES of config"""
-        if self.flag == "Correct":
-            if len(self.face_locations) > 1:
-                self.label_notification = tk.Label(master=self.window, text="Detected more 1 faces in image, please make sure just 1 face in image")
-            else:
-                save_inference_config(self.params, self.file_config)
-                update_face_image(self.frame_clone, self.face_locations, self.params, self.user)
-                # update_face_embed_vector(photonic_face_recognition, face_locations, params, name_student)
-                known_face_encodings, known_face_names = self.photonic_face_recognition.load_ground_truth_face_image_samples()
-                self.params["CLASSES"] = known_face_names
-        
-                # save new embedded vector of new instance in `face-embedded-vector`.
-                save_face_embed_vector(self.params["TXT_FILE_DIR"], known_face_encodings, known_face_names)
-                self.label_notification = tk.Label(master=self.window, text="Saved into database successful")
-        else:
-            self.label_notification = tk.Label(master=self.window, text="Please move your face in the middle camera")
-        self.label_notification.place(relx=0.35, rely=0.9, relwidth=0.2, anchor='n', relheight=0.1)
-
-
-    def show_camera(self):
-        """Show camera and detect human face"""
-        label_hello_user = tk.Label(master=self.window, text="Hello {}".format(self.user))
-        label_show_camera = tk.Label(master=self.window, width=self.video_capture.width, height=self.video_capture.height)
-
-        label_show_camera.place(relx=0.35, rely=0.4)
-        label_hello_user.place(relx=0.35, rely=0.3, relwidth=0.2, anchor='n', relheight=0.1)
-        # Grab a single frame of video
-        _, frame = self.video_capture.get_frame()
-        
-        # Frame_clone is frame but not be affected by drawning
-        self.frame_clone = frame.copy()
-        self.frame_clone = cv2.cvtColor(self.frame_clone, cv2.COLOR_BGR2RGB)
-
-        # Down scale frame
-        small_frame = self.photonic_face_recognition.down_scale_image(frame, self.params["DOWN_SCALE"])
-
-        # Apply trick to increase FPS
-        if self.process_this_frame:
-            self.face_locations = self.photonic_face_recognition.face_detection_algorithm(small_frame)
-        
-        # turn flag of process frame, mean if first frame is processed, second frame is not, third frame is processed, etc.
-        self.process_this_frame = not self.process_this_frame
-
-        # Draw frame
-        self.flag = self.photonic_face_recognition.face_detection_drawing(frame, self.face_locations, self.params["DOWN_SCALE"])
-
-        frame_PIL = Image.fromarray(frame)
-        frame_tk = ImageTk.PhotoImage(image=frame_PIL)
-        label_show_camera.imgtk = frame_tk
-        label_show_camera.configure(image=frame_tk)
-        label_show_camera.after(10, self.show_camera)
-
-    def check_attendance(self):
-        """Detect human face and classify name of user in CLASSES"""
-        label_note = tk.Label(master=self.window, text="Note: Please fix your face in front of the camera for 1 second for attendance")
-        label_note.place(relx=0.35, rely=0.33)
-        label_check_attendance = tk.Label(master=self.window, width=self.video_capture.width, height=self.video_capture.height)
-        label_check_attendance.place(relx=0.35, rely=0.4)
-
-        # Load available instances in dataset.
-        known_face_names = self.params["CLASSES"]
-        known_face_encodings = self.photonic_face_recognition.load_know_face_encodings(self.params["TXT_FILE_DIR"], known_face_names)
-
-        # Grab a single frame of video
-        _, frame = self.video_capture.get_frame()
-
-        # down scale frame
-        small_frame = self.photonic_face_recognition.down_scale_image(frame, self.params["DOWN_SCALE"])
-
-        # Apply trick to increase FPS
-        if self.process_this_frame:
-            self.face_locations = self.photonic_face_recognition.face_detection_algorithm(small_frame)
-            self.face_encodings = self.photonic_face_recognition.face_encoding_algorithm(small_frame, self.face_locations)
-            self.face_names = self.photonic_face_recognition.face_recognition_algorithm(self.face_encodings, known_face_encodings, 
-                                                                            known_face_names, self.params["TOLERANCE"])
-        
-        # turn flag of process frame, mean if first frame is processed, second frame is not, third frame is processed, etc.
-        self.process_this_frame = not self.process_this_frame
-
-        # Draw frame
-        self.photonic_face_recognition.face_recognition_drawning(frame, self.face_locations, self.face_names, self.params["DOWN_SCALE"])
-        frame_PIL = Image.fromarray(frame)
-        frame_tk = ImageTk.PhotoImage(image=frame_PIL)
-        label_check_attendance.imgtk = frame_tk
-        label_check_attendance.configure(image=frame_tk)
-        label_check_attendance.after(10, self.check_attendance)
 
 ### UTILITIES FUNCTION FOR `src/photonic_face_recognition`.
 def update_config(params, known_face_names):
@@ -215,7 +74,7 @@ def add_new_student_opencv(photonic_face_recognition, params):
     # setup 
     prev_frame_time = 0
     new_frame_time = 0
-    video_capture = cv2.VideoCapture(0)
+    video_capture = video_capture_mul_platform()
     process_this_frame = True
     while True:
         # Grab a single frame of video
@@ -286,8 +145,9 @@ def check_attendance_opencv(photonic_face_recognition, params):
     # setup 
     prev_frame_time = 0
     new_frame_time = 0
-    video_capture = cv2.VideoCapture(0)
-    process_this_frame = True
+    video_capture = video_capture_mul_platform()
+    patiences = params["PATIENCES"]
+    i = patiences
     while True:
         # Grab a single frame of video
         _, frame = video_capture.read()
@@ -298,15 +158,16 @@ def check_attendance_opencv(photonic_face_recognition, params):
         # convert frame to RGB
         rgb_small_frame = small_frame[:, :, ::-1]
 
-        # Apply trick to increase FPS
-        if process_this_frame:
+        if (i == patiences):
+            # process_this_frame
             face_locations = photonic_face_recognition.face_detection_algorithm(rgb_small_frame)
             face_encodings = photonic_face_recognition.face_encoding_algorithm(rgb_small_frame, face_locations)
             face_names = photonic_face_recognition.face_recognition_algorithm(face_encodings, known_face_encodings, 
                                                                               known_face_names, params["TOLERANCE"])
-        
-        # turn flag of process frame, mean if first frame is processed, second frame is not, third frame is processed, etc.
-        process_this_frame = not process_this_frame
+            # reset value of i
+            i = 1
+        else:
+            i += 1
 
         # Draw frame
         photonic_face_recognition.face_recognition_drawning(frame, face_locations, face_names, params["DOWN_SCALE"])
@@ -328,3 +189,33 @@ def check_attendance_opencv(photonic_face_recognition, params):
     # Release handle to the webcam
     video_capture.release()
     cv2.destroyAllWindows()
+
+### JETSON NANO CONFIGURE
+def running_on_jetson_nano():
+    # To make the same code work on a laptop or on a Jetson Nano, we'll detect when we are running on the Nano
+    # so that we can access the camera correctly in that case.
+    # On a normal Intel laptop, platform.machine() will be "x86_64" instead of "aarch64"
+    return platform.machine() == "aarch64"
+
+def get_jetson_gstreamer_source(capture_width=1280, capture_height=720, display_width=1280, display_height=720, framerate=60, flip_method=1):
+    """
+    Return an OpenCV-compatible video source description that uses gstreamer to capture video from the camera on a Jetson Nano
+    """
+    return (
+            f'nvarguscamerasrc ! video/x-raw(memory:NVMM), ' +
+            f'width=(int){capture_width}, height=(int){capture_height}, ' +
+            f'format=(string)NV12, framerate=(fraction){framerate}/1 ! ' +
+            f'nvvidconv flip-method={flip_method} ! ' +
+            f'video/x-raw, width=(int){display_width}, height=(int){display_height}, format=(string)BGRx ! ' +
+            'videoconvert ! video/x-raw, format=(string)BGR ! appsink'
+            )
+
+def video_capture_mul_platform():
+    if running_on_jetson_nano():
+        # Accessing the camera with OpenCV on a Jetson Nano requires gstreamer with a custom gstreamer source string
+        video_capture = cv2.VideoCapture(get_jetson_gstreamer_source(), cv2.CAP_GSTREAMER)
+    else:
+        # Accessing the camera with OpenCV on a laptop just requires passing in the number of the webcam (usually 0)
+        video_capture = cv2.VideoCapture(0)
+    
+    return video_capture
