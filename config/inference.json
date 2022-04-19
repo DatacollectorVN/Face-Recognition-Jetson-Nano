@@ -9,5 +9,6 @@
     "TXT_FILE_DIR": "face-embedded-vector",
     "TOLERANCE": 0.5,
     "METHOD_SIMILARITY": "l2_norm",
-    "DOWN_SCALE": 4
+    "DOWN_SCALE": 10,
+    "PATIENCES": 5
 }
