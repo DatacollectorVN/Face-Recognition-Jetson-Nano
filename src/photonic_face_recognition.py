@@ -239,4 +239,5 @@ class PhotonicFaceRecognition(SettingConfig):
 
         return flag
 
-    
+
+        

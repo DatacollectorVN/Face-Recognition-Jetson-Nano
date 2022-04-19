@@ -2,14 +2,14 @@ import cv2
 import tkinter as tk
 import cv2
 from PIL import Image, ImageTk
-from utils import save_face_embed_vector, save_inference_config, update_face_image
+from src.utils import save_face_embed_vector, save_inference_config, update_face_image, video_capture_mul_platform
 
 class MyVideoCapture:
-     def __init__(self, video_source=0):
+     def __init__(self):
          # Open the video source
-         self.vid = cv2.VideoCapture(video_source)
+         self.vid = video_capture_mul_platform()
          if not self.vid.isOpened():
-             raise ValueError("Unable to open video source", video_source)
+             raise ValueError("Unable to open video source")
  
          # Get video source width and height
          self.width = int(self.vid.get(cv2.CAP_PROP_FRAME_WIDTH))
@@ -51,7 +51,7 @@ class FaceRecognitionTkinter:
         self.user = entry_input_name
         self.params = params
         self.process_this_frame = True
-        self.video_capture = MyVideoCapture(0)
+        self.video_capture = MyVideoCapture()
         if self.user is not None:
             self.params["CLASSES"].append(self.user)
 
@@ -62,7 +62,6 @@ class FaceRecognitionTkinter:
             if len(self.face_locations) > 1:
                 self.label_notification = tk.Label(master=self.window, text="Detected more 1 faces in image, please make sure just 1 face in image")
             else:
-                save_inference_config(self.params, self.file_config)
                 update_face_image(self.frame_clone, self.face_locations, self.params, self.user)
                 # update_face_embed_vector(photonic_face_recognition, face_locations, params, name_student)
                 known_face_encodings, known_face_names = self.photonic_face_recognition.load_ground_truth_face_image_samples()
@@ -81,8 +80,8 @@ class FaceRecognitionTkinter:
         label_hello_user = tk.Label(master=self.window, text="Hello {}".format(self.user))
         label_show_camera = tk.Label(master=self.window, width=self.video_capture.width, height=self.video_capture.height)
 
-        label_show_camera.place(relx=0.35, rely=0.4)
-        label_hello_user.place(relx=0.35, rely=0.3, relwidth=0.2, anchor='n', relheight=0.1)
+        label_show_camera.place(relx=0.15, rely=0.4)
+        label_hello_user.place(relx=0.2, rely=0.3, relwidth=0.2, anchor='n', relheight=0.1)
         # Grab a single frame of video
         _, frame = self.video_capture.get_frame()
         
@@ -91,7 +90,7 @@ class FaceRecognitionTkinter:
         self.frame_clone = cv2.cvtColor(self.frame_clone, cv2.COLOR_BGR2RGB)
 
         # Down scale frame
-        small_frame = self.photonic_face_recognition.down_scale_image(frame, self.params["DOWN_SCALE"])
+        small_frame = self.photonic_face_recognition.down_scale_image(frame, self.face_locations, self.params["DOWN_SCALE"])
 
         # Apply trick to increase FPS
         if self.process_this_frame:
@@ -114,11 +113,15 @@ class FaceRecognitionTkinter:
         label_note = tk.Label(master=self.window, text="Note: Please fix your face in front of the camera for 1 second for attendance")
         label_note.place(relx=0.35, rely=0.33)
         label_check_attendance = tk.Label(master=self.window, width=self.video_capture.width, height=self.video_capture.height)
-        label_check_attendance.place(relx=0.15, rely=0.4)
+        label_check_attendance.place(relx=0.35, rely=0.4)
 
         # Load available instances in dataset.
         known_face_names = self.params["CLASSES"]
         known_face_encodings = self.photonic_face_recognition.load_know_face_encodings(self.params["TXT_FILE_DIR"], known_face_names)
+
+        # Setup
+        patiences = self.params["PATIENCES"]
+        i = patiences
 
         # Grab a single frame of video
         _, frame = self.video_capture.get_frame()
@@ -127,12 +130,15 @@ class FaceRecognitionTkinter:
         small_frame = self.photonic_face_recognition.down_scale_image(frame, self.params["DOWN_SCALE"])
 
         # Apply trick to increase FPS
-        if self.process_this_frame:
+        if (i == patiences):
             self.face_locations = self.photonic_face_recognition.face_detection_algorithm(small_frame)
             self.face_encodings = self.photonic_face_recognition.face_encoding_algorithm(small_frame, self.face_locations)
             self.face_names = self.photonic_face_recognition.face_recognition_algorithm(self.face_encodings, known_face_encodings, 
                                                                             known_face_names, self.params["TOLERANCE"])
-        
+            # reset value of i
+            i = 1
+        else:
+            i += 1
         # turn flag of process frame, mean if first frame is processed, second frame is not, third frame is processed, etc.
         self.process_this_frame = not self.process_this_frame
 
