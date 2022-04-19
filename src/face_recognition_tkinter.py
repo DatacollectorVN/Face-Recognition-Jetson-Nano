@@ -90,7 +90,7 @@ class FaceRecognitionTkinter:
         self.frame_clone = cv2.cvtColor(self.frame_clone, cv2.COLOR_BGR2RGB)
 
         # Down scale frame
-        small_frame = self.photonic_face_recognition.down_scale_image(frame, self.face_locations, self.params["DOWN_SCALE"])
+        small_frame = self.photonic_face_recognition.down_scale_image(frame, self.params["DOWN_SCALE"])
 
         # Apply trick to increase FPS
         if self.process_this_frame:
