@@ -148,6 +148,8 @@ def check_attendance_opencv(photonic_face_recognition, params):
     video_capture = video_capture_mul_platform()
     patiences = params["PATIENCES"]
     i = patiences
+    prev_face_name = None
+    check_atten_count = 0
     while True:
         # Grab a single frame of video
         _, frame = video_capture.read()
@@ -157,13 +159,35 @@ def check_attendance_opencv(photonic_face_recognition, params):
 
         # convert frame to RGB
         rgb_small_frame = small_frame[:, :, ::-1]
-
+        
+        # process_this_frame
         if (i == patiences):
-            # process_this_frame
+            # face dectection
             face_locations = photonic_face_recognition.face_detection_algorithm(rgb_small_frame)
-            face_encodings = photonic_face_recognition.face_encoding_algorithm(rgb_small_frame, face_locations)
-            face_names = photonic_face_recognition.face_recognition_algorithm(face_encodings, known_face_encodings, 
-                                                                              known_face_names, params["TOLERANCE"])
+            if len(face_locations) == 1:
+                # encoding face
+                face_encodings = photonic_face_recognition.face_encoding_algorithm(rgb_small_frame, face_locations)
+                
+                # face recognition
+                face_names = photonic_face_recognition.face_recognition_algorithm(face_encodings, known_face_encodings, 
+                                                                                  known_face_names, params["TOLERANCE"])
+                if prev_face_name is None:
+                    prev_face_name = face_names[0]
+                else:
+                    cur_face_name = face_names[0]
+                    if prev_face_name == cur_face_name:
+                        check_atten_count += 1
+                    # if different face then reset 
+                    else:
+                        check_atten_count = 0
+                        prev_face_name = None
+
+            # if find 2 faces then rest
+            else:
+                check_atten_count = 0
+                prev_face_name = None
+                face_names = ["people" for _ in range(len(face_locations))]
+            
             # reset value of i
             i = 1
         else:
@@ -175,7 +199,8 @@ def check_attendance_opencv(photonic_face_recognition, params):
         # calculate FPS
         new_frame_time = time.time()
         fps = int(1 / (new_frame_time - prev_frame_time))
-        draw_fps_opencv(frame, fps)
+        if params["DRAW_FPS"]:
+            draw_fps_opencv(frame, fps)
         prev_frame_time = new_frame_time
         
         # Display the resulting image
@@ -185,19 +210,59 @@ def check_attendance_opencv(photonic_face_recognition, params):
         # close all if press ESC
         if key == 27:
             break
+        if check_atten_count == 10:
+            print(f"Hello {cur_face_name}")
+            break
     
     # Release handle to the webcam
     video_capture.release()
     cv2.destroyAllWindows()
 
+def _compute_iou(bbox_1, bbox_2):
+    '''
+    Args:
+        + bbox_1: (list) with shape (4, ) contain (x_min, y_min, x_max, y_max)
+        + bbox_2: (list) with shape (4, ) contain (x_min, y_min, x_max, y_max)
+    Output:
+        + iou (float) Intersection over Union of both bboexs.
+    '''
+    
+    assert bbox_1[0] < bbox_1[2], "invalid format"
+    assert bbox_1[1] < bbox_1[3], "invalid format"
+    assert bbox_2[0] < bbox_2[2], "invalid format"
+    assert bbox_2[1] < bbox_2[3], "invalid format"
+
+    # determine the coordinates of the intersection rectangle
+    x_left = max(bbox_1[0], bbox_2[0])
+    x_right = min(bbox_1[2], bbox_2[2])
+    y_top = max(bbox_1[1], bbox_2[1])
+    y_bottom = min(bbox_1[3], bbox_2[3])
+    if (x_left >= x_right) or (y_top >= y_bottom):
+        iou = -1
+    else:
+        # compute intersection area
+        intersection_area = (x_right - x_left) * (y_bottom - y_top)
+
+        # compute area of 2 bboxes
+        bbox_1_area = (bbox_1[2] - bbox_1[0]) * (bbox_1[3] - bbox_1[1])
+        bbox_2_area = (bbox_2[2] - bbox_2[0]) * (bbox_2[3] - bbox_2[1])
+        try:
+            # compute iou
+            # might be prevent some case iou < 0 or iou > 1 --> but in chest_xray we don't need
+            iou = intersection_area / float(bbox_1_area + bbox_2_area - intersection_area)
+        except ZeroDivisionError:
+            iou = -1
+    
+    return iou
+
 ### JETSON NANO CONFIGURE
-def running_on_jetson_nano():
+def _running_on_jetson_nano():
     # To make the same code work on a laptop or on a Jetson Nano, we'll detect when we are running on the Nano
     # so that we can access the camera correctly in that case.
     # On a normal Intel laptop, platform.machine() will be "x86_64" instead of "aarch64"
     return platform.machine() == "aarch64"
 
-def get_jetson_gstreamer_source(capture_width=1280, capture_height=720, display_width=1280, display_height=720, framerate=60, flip_method=1):
+def _get_jetson_gstreamer_source(capture_width=1280, capture_height=720, display_width=1280, display_height=720, framerate=60, flip_method=1):
     """
     Return an OpenCV-compatible video source description that uses gstreamer to capture video from the camera on a Jetson Nano
     """
@@ -211,11 +276,12 @@ def get_jetson_gstreamer_source(capture_width=1280, capture_height=720, display_
             )
 
 def video_capture_mul_platform():
-    if running_on_jetson_nano():
+    if _running_on_jetson_nano():
         # Accessing the camera with OpenCV on a Jetson Nano requires gstreamer with a custom gstreamer source string
-        video_capture = cv2.VideoCapture(get_jetson_gstreamer_source(), cv2.CAP_GSTREAMER)
+        video_capture = cv2.VideoCapture(_get_jetson_gstreamer_source(), cv2.CAP_GSTREAMER)
     else:
         # Accessing the camera with OpenCV on a laptop just requires passing in the number of the webcam (usually 0)
         video_capture = cv2.VideoCapture(0)
     
     return video_capture
+

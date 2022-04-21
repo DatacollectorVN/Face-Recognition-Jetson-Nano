@@ -1,14 +1,1 @@
-{
-    "IMAGE_PATH": "./face-image-samples",
-    "CLASSES": [
-        "Nathan Ngo",
-        "Kim Jisoo",
-        "Khoi VN"
-    ],
-    "UPDATE_DATABASES": true,
-    "TXT_FILE_DIR": "face-embedded-vector",
-    "TOLERANCE": 0.5,
-    "METHOD_SIMILARITY": "l2_norm",
-    "DOWN_SCALE": 10,
-    "PATIENCES": 5
-}
+{"IMAGE_PATH": "./face-image-samples", "CLASSES": ["Nathan Ngo", "Kim Jisoo", "Khoi VN"], "UPDATE_DATABASES": false, "TXT_FILE_DIR": "face-embedded-vector", "TOLERANCE": 0.5, "METHOD_SIMILARITY": "l2_norm", "DOWN_SCALE": 10, "PATIENCES": 5, "DRAW_FPS": true, "ATTENDANCE_THR": 10}
