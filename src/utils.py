@@ -210,7 +210,7 @@ def check_attendance_opencv(photonic_face_recognition, params):
         # close all if press ESC
         if key == 27:
             break
-        if check_atten_count == 10:
+        if check_atten_count == params["ATTENDANCE_THR"]:
             print(f"Hello {cur_face_name}")
             break
     
