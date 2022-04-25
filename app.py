@@ -22,8 +22,8 @@ class App:
         # Init window of Tkinter app
         self.window = window
         self.window.title("Face Recognition App")
-        self.window.attributes('-fullscreen', True)
-        # self.window.geometry("%dx%d+0+0" % (self.window.winfo_screenwidth() , self.window.winfo_screenheight()))
+        # self.window.attributes('-fullscreen', True)
+        self.window.geometry("%dx%d+0+0" % (self.window.winfo_screenwidth() , self.window.winfo_screenheight()))
 
         # Load params
         self.file_config = FILE_CONFIG
@@ -60,7 +60,8 @@ class App:
 
     def add_user(self):
         self.add_user_window = tk.Toplevel(self.window)
-        self.add_user_window.attributes('-fullscreen', True)
+        # self.add_user_window.attributes('-fullscreen', True)
+        self.add_user_window.geometry("%dx%d+0+0" % (self.add_user_window.winfo_screenwidth() , self.add_user_window.winfo_screenheight()))
         self.header = tk.Label(master=self.add_user_window, text="Face Recognition App", font=("Helvetica", 40))
         self.logo_bme_add_user = tk.Frame(master=self.add_user_window)
         label = tk.Label(self.logo_bme_add_user, image=self.logo_bme)

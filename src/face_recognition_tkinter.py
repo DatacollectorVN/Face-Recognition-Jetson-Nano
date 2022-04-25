@@ -80,7 +80,7 @@ class FaceRecognitionTkinter:
         label_hello_user = tk.Label(master=self.window, text="Hello {}".format(self.user), font=("Helvetica", 20))
         # label_show_camera = tk.Label(master=self.window, width=self.video_capture.width, height=self.video_capture.height)
         label_show_camera = tk.Canvas(master=self.window, width = self.video_capture.width, height = self.video_capture.height)
-        label_show_camera.place(relx=0.35, rely=0.4)
+        label_show_camera.place(relx=0.15, rely=0.4)
 
         # label_show_camera.place(relx=0.15, rely=0.4)
         label_hello_user.place(relx=0.2, rely=0.3, relwidth=0.2, anchor='n', relheight=0.1)
@@ -106,11 +106,11 @@ class FaceRecognitionTkinter:
 
         frame_PIL = Image.fromarray(frame)
         frame_tk = ImageTk.PhotoImage(image=frame_PIL)
-        # label_show_camera.imgtk = frame_tk
+        label_show_camera.imgtk = frame_tk
         # label_show_camera.configure(image=frame_tk)
         # label_show_camera.after(10, self.show_camera)
         label_show_camera.create_image(0, 0, anchor=tk.NW, image=frame_tk)
-        label_show_camera.after(1, self.show_camera)
+        label_show_camera.after(10, self.show_camera)
 
     def check_attendance(self):
         """Detect human face and classify name of user in CLASSES"""
@@ -156,6 +156,6 @@ class FaceRecognitionTkinter:
         # label_check_attendance.configure(image=frame_tk)
         # label_check_attendance.after(10, self.check_attendance)
         label_check_attendance.create_image(0, 0, anchor=tk.NW, image=frame_tk)
-        label_check_attendance.after(1, self.check_attendance)
+        label_check_attendance.after(10, self.check_attendance)
 
         
