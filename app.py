@@ -1,4 +1,5 @@
 import json
+import copy
 import os
 import tkinter as tk
 from PIL import ImageTk, Image
@@ -58,6 +59,7 @@ class App:
         btn_exit.place(relx=0.05, rely=0.7, relwidth=0.2,
                        relheight=0.1, anchor='nw')
 
+        
     def add_user(self):
         self.add_user_window = tk.Toplevel(self.window)
         # self.add_user_window.attributes('-fullscreen', True)
@@ -72,18 +74,24 @@ class App:
         # self.add_user_window.geometry("%dx%d" % (self.add_user_window.winfo_screenwidth() , self.add_user_window.winfo_screenheight()))
         self.params["UPDATE_DATABASES"] = True
         photonic_face_recognition = PhotonicFaceRecognition(**self.params)
-        entry_string = tk.StringVar()
-        entry_input_name = tk.Entry(master=self.add_user_window, textvariable=entry_string)
+        self.entry_string = tk.StringVar()
+        entry_input_name = tk.Entry(master=self.add_user_window, textvariable=self.entry_string)
         label_input_name = tk.Label(master=self.add_user_window, text="Input name:", font=("Helvetica", 20))
-        button_snapshot = tk.Button(master=self.add_user_window, text="Snapshot", padx=5, pady=5, font=("Helvetica", 20), relief=tk.RAISED, borderwidth=5, background="#808080",
-                                    command=lambda: FaceRecognitionTkinter(self.add_user_window, entry_input_name.get(), photonic_face_recognition, self.params, FILE_CONFIG).snapshot_clicked())
-        VirtualKeyboard(entry_string, self.add_user_window)
 
-        btn_enter = tk.Button(master=self.add_user_window, text="Enter", padx=5, pady=5, font=("Helvetica", 20), relief=tk.RAISED, borderwidth=5, background="#808080",
-                              command=lambda: FaceRecognitionTkinter(self.add_user_window, entry_input_name.get(), photonic_face_recognition, self.params, FILE_CONFIG).show_camera())
+        def string_enter():
+            global input_name
+            input_name = self.entry_string.get()
+            user_name = copy.deepcopy(input_name)
+            return user_name
+
+        VirtualKeyboard(self.entry_string, self.add_user_window)
+
+        btn_enter = tk.Button(master=self.add_user_window, text="Enter", padx=5, pady=5, font=("Helvetica", 20), 
+                                relief=tk.RAISED, borderwidth=5, background="#808080", command=lambda: FaceRecognitionTkinter(self.add_user_window, string_enter(), photonic_face_recognition, self.params, FILE_CONFIG).show_camera())
+        button_snapshot = tk.Button(master=self.add_user_window, text="Snapshot", padx=5, pady=5, font=("Helvetica", 20), relief=tk.RAISED, borderwidth=5, background="#808080",
+                                    command=lambda: FaceRecognitionTkinter(self.add_user_window, string_enter(), photonic_face_recognition, self.params, FILE_CONFIG).snapshot_clicked())
         btn_back_home = tk.Button(master=self.add_user_window, text="Back home", padx=5, pady=5, font=("Helvetica", 20), 
                                   relief=tk.RAISED, borderwidth=5, background="#808080", command=lambda: self.add_user_window.destroy())
-
         entry_input_name.place(
             relx=0.4, rely=0.2, relwidth=0.3, anchor='n', relheight=0.1)
         label_input_name.place(relx=0.2, rely=0.2,

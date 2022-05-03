@@ -55,31 +55,12 @@ class FaceRecognitionTkinter:
         if self.user is not None:
             self.params["CLASSES"].append(self.user)
 
-        
-    def snapshot_clicked(self):
-        """Auto save face image and encode. Then add user into parameter CLASSES of config"""
-        if self.flag == "Correct":
-            if len(self.face_locations) > 1:
-                self.label_notification = tk.Label(master=self.window, text="Detected more 1 faces in image, please make sure just 1 face in image", font=("Helvetica", 20))
-            else:
-                update_face_image(self.frame_clone, self.face_locations, self.params, self.user)
-                # update_face_embed_vector(photonic_face_recognition, face_locations, params, name_student)
-                known_face_encodings, known_face_names = self.photonic_face_recognition.load_ground_truth_face_image_samples()
-                self.params["CLASSES"] = known_face_names
-        
-                # save new embedded vector of new instance in `face-embedded-vector`.
-                save_face_embed_vector(self.params["TXT_FILE_DIR"], known_face_encodings, known_face_names)
-                self.label_notification = tk.Label(master=self.window, text="Saved into database successful", font=("Helvetica", 20))
-        else:
-            self.label_notification = tk.Label(master=self.window, text="Please move your face in the middle camera", font=("Helvetica", 20))
-        self.label_notification.place(relx=0.35, rely=0.9, relwidth=0.2, anchor='n', relheight=0.1)
-
 
     def show_camera(self):
         """Show camera and detect human face"""
         label_hello_user = tk.Label(master=self.window, text="Hello {}".format(self.user), font=("Helvetica", 20))
         # label_show_camera = tk.Label(master=self.window, width=self.video_capture.width, height=self.video_capture.height)
-        label_show_camera = tk.Canvas(master=self.window, width = self.video_capture.width, height = self.video_capture.height)
+        label_show_camera = tk.Canvas(master=self.window, width = self.video_capture.width*1.2, height = self.video_capture.height)
         label_show_camera.place(relx=0.15, rely=0.4)
 
         # label_show_camera.place(relx=0.15, rely=0.4)
@@ -111,6 +92,26 @@ class FaceRecognitionTkinter:
         # label_show_camera.after(10, self.show_camera)
         label_show_camera.create_image(0, 0, anchor=tk.NW, image=frame_tk)
         label_show_camera.after(10, self.show_camera)
+
+    def snapshot_clicked(self):
+        self.show_camera()
+        print("User:", self.user)
+        """Auto save face image and encode. Then add user into parameter CLASSES of config"""
+        if self.flag == "Correct":
+            if len(self.face_locations) > 1:
+                self.label_notification = tk.Label(master=self.window, text="Detected more 1 faces in image, please make sure just 1 face in image", font=("Helvetica", 20))
+            else:
+                update_face_image(self.frame_clone, self.face_locations, self.params, self.user)
+                # update_face_embed_vector(photonic_face_recognition, face_locations, params, name_student)
+                known_face_encodings, known_face_names = self.photonic_face_recognition.load_ground_truth_face_image_samples()
+                self.params["CLASSES"] = known_face_names
+        
+                # save new embedded vector of new instance in `face-embedded-vector`.
+                save_face_embed_vector(self.params["TXT_FILE_DIR"], known_face_encodings, known_face_names)
+                self.label_notification = tk.Label(master=self.window, text="Saved into database successful", font=("Helvetica", 20))
+        else:
+            self.label_notification = tk.Label(master=self.window, text="Please move your face in the middle camera", font=("Helvetica", 20))
+        self.label_notification.place(relx=0.3, rely=0.9, relwidth=0.5, anchor='n', relheight=0.1)
 
     def check_attendance(self):
         """Detect human face and classify name of user in CLASSES"""
