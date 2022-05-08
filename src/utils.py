@@ -65,18 +65,101 @@ def draw_fps_opencv(frame, fps):
 
     return frame
 
+class Button(object):
+    def __init__(self):
+        
+        self.left_exit = 10
+        self.top_exit  = 10
+        self.right_exit = 100
+        self.bottom_exit = 60
+
+        self.left_snap = 10
+        self.top_snap  = 120
+        self.right_snap = 100
+        self.bottom_snap = 170
+        
+        self.hover_exit = False
+        self.hover_snap = False
+
+        #self.clicked = False
+        #self.command = command
+        
+    def exit_event(self, event, x, y, flags, param):
+        self.hover_exit = (self.left_exit <= x <= self.right_exit and \
+            self.top_exit <= y <= self.bottom_exit)
+            
+        if self.hover_exit and flags == 1:
+            global running
+            running = False
+        
+    def draw_exit(self, frame):
+        if not self.hover_exit:
+            #cv2.circle(frame, (20,20), 10 , (0,0,255), -1)
+            cv2.rectangle(frame, (10,10), (100,60), (0,0,255), -1)
+            cv2.putText(frame, "Exit", (20,40), cv2.FONT_HERSHEY_PLAIN, 2 , (255,255,255), 2)
+        else:
+            cv2.rectangle(frame, (10,10), (100,60), (0,255,0), -1)
+            cv2.putText(frame, "Exit", (20,40), cv2.FONT_HERSHEY_PLAIN, 2 , (255,255,255), 2)
+    
+    #def snapshot_event(self, envet, x, y, flags, param):
+    def events(self, envet, x, y, flags, param):
+        self.hover_exit = (self.left_exit <= x <= self.right_exit and \
+            self.top_exit <= y <= self.bottom_exit)
+
+        self.hover_snap = (self.left_snap <= x <= self.right_snap and \
+            self.top_snap <= y <= self.bottom_snap)
+        
+        if self.hover_exit and flags == 1:
+            global running
+            running = False
+
+        if self.hover_snap and flags == 1:
+            print(flag)
+            if flag == "Correct":
+                if len(face_locations) > 1:
+                     print(f"Detected more 1 faces in image, please make sure just 1 face in image")
+                else:
+                    update_face_image(frame_clone, face_locations, params_clone, name_student_clone)
+
+                    # update_face_embed_vector(photonic_face_recognition, face_locations, params, name_student)
+                    known_face_encodings, known_face_names = photonic_face_recognition_clone.load_ground_truth_face_image_samples()
+                    params_clone["CLASSES"] = known_face_names
+            
+                    # save new embedded vector of new instance in `face-embedded-vector`.
+                    save_face_embed_vector(params_clone["TXT_FILE_DIR"], known_face_encodings, known_face_names)
+                    running = False
+            else:
+                print("Please move your face in the middle camera")
+    
+    def draw_snapshot(self, frame):
+        if not self.hover_snap:
+            #cv2.circle(frame, (20,20), 10 , (0,0,255), -1)
+            cv2.rectangle(frame, (10,120), (100,170), (0,0,255), -1)
+            cv2.putText(frame, "Snapshot", (20,140), cv2.FONT_HERSHEY_PLAIN, 2 , (255,255,255), 2)
+        else:
+            cv2.rectangle(frame, (10,120), (100,170), (0,255,0), -1)
+            cv2.putText(frame, "Snapshot", (20,140), cv2.FONT_HERSHEY_PLAIN, 2 , (255,255,255), 2)
+
+
 def add_new_student_opencv(photonic_face_recognition, params):
     '''function is used for `Add new student` event'''
 
-    name_student = input("Please enter name of new student: ")
-    params["CLASSES"].append(name_student)
-    print(f"Hello {name_student}")
+    global running, photonic_face_recognition_clone, name_student, params_clone, \
+           frame_clone, face_locations, flag
+    running = True
+    photonic_face_recognition_clone = photonic_face_recognition
+    name_student_clone = input("Please enter name of new student: ")
+    params["CLASSES"].append(name_student_clone)
+    params_clone = params
+    print(f"Hello {name_student_clone}")
+    
     # setup 
+    button = Button()
     prev_frame_time = 0
     new_frame_time = 0
     video_capture = video_capture_mul_platform()
     process_this_frame = True
-    while True:
+    while running:
         # Grab a single frame of video
         _, frame = video_capture.read()
         
@@ -102,11 +185,104 @@ def add_new_student_opencv(photonic_face_recognition, params):
         # calculate FPS
         new_frame_time = time.time()
         fps = int(1 / (new_frame_time - prev_frame_time))
-        draw_fps_opencv(frame, fps)
+        if params["DRAW_FPS"]:
+            draw_fps_opencv(frame, fps)
         prev_frame_time = new_frame_time
         
+        button.draw_exit(frame)
+        button.draw_snapshot(frame)
+
         # Display the resulting image
         cv2.imshow('Video', frame)
+
+        # set mouse click
+        cv2.setMouseCallback("Video", button.events)
+
+        key = cv2.waitKey(1)
+        
+        # press ENTER
+        if key == 13:
+            if flag == "Correct":
+                if len(face_locations) > 1:
+                     print(f"Detected more 1 faces in image, please make sure just 1 face in image")
+                else:
+                    update_face_image(frame_clone, face_locations, params, name_student_clone)
+
+                    # update_face_embed_vector(photonic_face_recognition, face_locations, params, name_student)
+                    known_face_encodings, known_face_names = photonic_face_recognition.load_ground_truth_face_image_samples()
+                    params["CLASSES"] = known_face_names
+            
+                    # save new embedded vector of new instance in `face-embedded-vector`.
+                    save_face_embed_vector(params["TXT_FILE_DIR"], known_face_encodings, known_face_names)
+                    break
+            else:
+                print("Please move your face in the middle camera")
+
+        # close all if press ESC
+        if key == 27:
+            break
+    
+    # Release handle to the webcam
+    video_capture.release()
+    cv2.destroyAllWindows()
+
+def add_new_student_tkinter(photonic_face_recognition, name_student, params):
+    '''function is used for `Add new student` event'''
+    global running, photonic_face_recognition_clone, params_clone, \
+           frame_clone, face_locations, flag, name_student_clone
+    running = True
+    name_student_clone = name_student
+    photonic_face_recognition_clone = photonic_face_recognition
+    params["CLASSES"].append(name_student)
+    params_clone = params
+    # cv2.namedWindow("Video", cv2.WINDOW_NORMAL)
+    # cv2.setWindowProperty("Video", cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
+    
+    # setup 
+    button = Button()
+    prev_frame_time = 0
+    new_frame_time = 0
+    video_capture = video_capture_mul_platform()
+    process_this_frame = True
+    while running:
+        # Grab a single frame of video
+        _, frame = video_capture.read()
+        
+        # frame_clone is frame but not be affected by drawning
+        frame_clone = frame.copy()
+
+        # down scale frame
+        small_frame = photonic_face_recognition.down_scale_image(frame, params["DOWN_SCALE"])
+
+        # convert frame to RGB
+        rgb_small_frame = small_frame[:, :, ::-1]
+
+        # Apply trick to increase FPS
+        if process_this_frame:
+            face_locations = photonic_face_recognition.face_detection_algorithm(rgb_small_frame)
+        
+        # turn flag of process frame, mean if first frame is processed, second frame is not, third frame is processed, etc.
+        process_this_frame = not process_this_frame
+
+        # Draw frame
+        flag = photonic_face_recognition.face_detection_drawing(frame, face_locations, params["DOWN_SCALE"])
+
+        # calculate FPS
+        new_frame_time = time.time()
+        fps = int(1 / (new_frame_time - prev_frame_time))
+        if params["DRAW_FPS"]:
+            draw_fps_opencv(frame, fps)
+        prev_frame_time = new_frame_time
+        
+        button.draw_exit(frame)
+        button.draw_snapshot(frame)
+
+        # Display the resulting image
+        cv2.imshow('Video', frame)
+
+        # set mouse click
+        cv2.setMouseCallback("Video", button.events)
+
         key = cv2.waitKey(1)
         
         # press ENTER
@@ -136,13 +312,17 @@ def add_new_student_opencv(photonic_face_recognition, params):
     cv2.destroyAllWindows()
 
 def check_attendance_opencv(photonic_face_recognition, params):
+    global running
+    running = True
     '''Function is used for `Check attendance` envent'''
-
+    cv2.namedWindow("Video", cv2.WINDOW_NORMAL)
+    cv2.setWindowProperty("Video", cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
     # Load avaiable instances in dataset.
     known_face_names = params["CLASSES"]
     known_face_encodings = photonic_face_recognition.load_know_face_encodings(params["TXT_FILE_DIR"], known_face_names)
 
     # setup 
+    button = Button()
     prev_frame_time = 0
     new_frame_time = 0
     video_capture = video_capture_mul_platform()
@@ -150,7 +330,7 @@ def check_attendance_opencv(photonic_face_recognition, params):
     i = patiences
     prev_face_name = None
     check_atten_count = 0
-    while True:
+    while running:
         # Grab a single frame of video
         _, frame = video_capture.read()
 
@@ -203,16 +383,23 @@ def check_attendance_opencv(photonic_face_recognition, params):
             draw_fps_opencv(frame, fps)
         prev_frame_time = new_frame_time
         
+        # Draw button
+        button.draw_exit(frame)
+        
         # Display the resulting image
         cv2.imshow('Video', frame)
+
+        # set mouse clicl
+        cv2.setMouseCallback("Video", button.exit_event)
+
         key = cv2.waitKey(1)
 
         # close all if press ESC
         if key == 27:
-            break
+            running = False
         if check_atten_count == params["ATTENDANCE_THR"]:
             print(f"Hello {cur_face_name}")
-            break
+            running = False
     
     # Release handle to the webcam
     video_capture.release()
@@ -262,7 +449,7 @@ def _running_on_jetson_nano():
     # On a normal Intel laptop, platform.machine() will be "x86_64" instead of "aarch64"
     return platform.machine() == "aarch64"
 
-def _get_jetson_gstreamer_source(capture_width=1280, capture_height=720, display_width=1280, display_height=720, framerate=60, flip_method=1):
+def _get_jetson_gstreamer_source(capture_width=1280, capture_height=720, display_width=1280, display_height=720, framerate=120, flip_method=2):
     """
     Return an OpenCV-compatible video source description that uses gstreamer to capture video from the camera on a Jetson Nano
     """
@@ -284,4 +471,3 @@ def video_capture_mul_platform():
         video_capture = cv2.VideoCapture(0)
     
     return video_capture
-
