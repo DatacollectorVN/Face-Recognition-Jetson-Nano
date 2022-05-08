@@ -65,13 +65,57 @@ def draw_fps_opencv(frame, fps):
 
     return frame
 
+class Button(object):
+    def __init__(self, text, x, y, width, height, command=None):
+        self.text = text
+        self.x = x
+        self.y = y
+        self.width = width
+        self.height = height
+        
+        self.left = 10
+        self.top  = 10
+        #self.right  = x + width - 1 
+        self.right = 100
+        self.bottom = 60
+        
+        self.hover = False
+        self.clicked = False
+        self.command = command
+        
+    def exit_event(self, event, x, y, flags, param):
+        self.hover = (self.left <= x <= self.right and \
+            self.top <= y <= self.bottom)
+            
+        if self.hover and flags == 1:
+            self.clicked = False
+            global running
+            running = False
+            if self.command:
+                self.command()
+        
+        
+    def draw_exit(self, frame):
+        if not self.hover:
+            
+            #cv2.circle(frame, (20,20), 10 , (0,0,255), -1)
+            cv2.rectangle(frame, (10,10), (100,60), (0,0,255), -1)
+            cv2.putText(frame, "Exit", (20,40), cv2.FONT_HERSHEY_PLAIN, 2 , (255,255,255), 2)
+        else:
+            cv2.rectangle(frame, (10,10), (100,60), (0,255,0), -1)
+            cv2.putText(frame, "Exit", (20,40), cv2.FONT_HERSHEY_PLAIN, 2 , (255,255,255), 2)
+    
+    
+
 def add_new_student_opencv(photonic_face_recognition, params):
     '''function is used for `Add new student` event'''
 
     name_student = input("Please enter name of new student: ")
     params["CLASSES"].append(name_student)
     print(f"Hello {name_student}")
+    
     # setup 
+    button = Button('QUIT', 0, 0, 100, 30)
     prev_frame_time = 0
     new_frame_time = 0
     video_capture = video_capture_mul_platform()
@@ -136,6 +180,8 @@ def add_new_student_opencv(photonic_face_recognition, params):
     cv2.destroyAllWindows()
 
 def check_attendance_opencv(photonic_face_recognition, params):
+    global running
+    running = True
     '''Function is used for `Check attendance` envent'''
 
     # Load avaiable instances in dataset.
@@ -143,6 +189,7 @@ def check_attendance_opencv(photonic_face_recognition, params):
     known_face_encodings = photonic_face_recognition.load_know_face_encodings(params["TXT_FILE_DIR"], known_face_names)
 
     # setup 
+    button = Button('QUIT', 0, 0, 100, 30)
     prev_frame_time = 0
     new_frame_time = 0
     video_capture = video_capture_mul_platform()
@@ -150,7 +197,7 @@ def check_attendance_opencv(photonic_face_recognition, params):
     i = patiences
     prev_face_name = None
     check_atten_count = 0
-    while True:
+    while running:
         # Grab a single frame of video
         _, frame = video_capture.read()
 
@@ -203,16 +250,23 @@ def check_attendance_opencv(photonic_face_recognition, params):
             draw_fps_opencv(frame, fps)
         prev_frame_time = new_frame_time
         
+        # Draw button
+        button.draw_exit(frame)
+        
         # Display the resulting image
         cv2.imshow('Video', frame)
+
+        # set mouse clicl
+        cv2.setMouseCallback("Video", button.exit_event)
+
         key = cv2.waitKey(1)
 
         # close all if press ESC
         if key == 27:
-            break
+            running = False
         if check_atten_count == params["ATTENDANCE_THR"]:
             print(f"Hello {cur_face_name}")
-            break
+            running = False
     
     # Release handle to the webcam
     video_capture.release()
