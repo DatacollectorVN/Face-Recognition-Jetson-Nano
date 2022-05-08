@@ -66,38 +66,34 @@ def draw_fps_opencv(frame, fps):
     return frame
 
 class Button(object):
-    def __init__(self, text, x, y, width, height, command=None):
-        self.text = text
-        self.x = x
-        self.y = y
-        self.width = width
-        self.height = height
+    def __init__(self):
         
-        self.left = 10
-        self.top  = 10
-        #self.right  = x + width - 1 
-        self.right = 100
-        self.bottom = 60
+        self.left_exit = 10
+        self.top_exit  = 10
+        self.right_exit = 100
+        self.bottom_exit = 60
+
+        self.left_snap = 10
+        self.top_snap  = 120
+        self.right_snap = 100
+        self.bottom_snap = 170
         
-        self.hover = False
-        self.clicked = False
-        self.command = command
+        self.hover_exit = False
+        self.hover_snap = False
+
+        #self.clicked = False
+        #self.command = command
         
     def exit_event(self, event, x, y, flags, param):
-        self.hover = (self.left <= x <= self.right and \
-            self.top <= y <= self.bottom)
+        self.hover_exit = (self.left_exit <= x <= self.right_exit and \
+            self.top_exit <= y <= self.bottom_exit)
             
-        if self.hover and flags == 1:
-            self.clicked = False
+        if self.hover_exit and flags == 1:
             global running
             running = False
-            if self.command:
-                self.command()
-        
         
     def draw_exit(self, frame):
-        if not self.hover:
-            
+        if not self.hover_exit:
             #cv2.circle(frame, (20,20), 10 , (0,0,255), -1)
             cv2.rectangle(frame, (10,10), (100,60), (0,0,255), -1)
             cv2.putText(frame, "Exit", (20,40), cv2.FONT_HERSHEY_PLAIN, 2 , (255,255,255), 2)
@@ -105,22 +101,63 @@ class Button(object):
             cv2.rectangle(frame, (10,10), (100,60), (0,255,0), -1)
             cv2.putText(frame, "Exit", (20,40), cv2.FONT_HERSHEY_PLAIN, 2 , (255,255,255), 2)
     
+    #def snapshot_event(self, envet, x, y, flags, param):
+    def events(self, envet, x, y, flags, param):
+        self.hover_exit = (self.left_exit <= x <= self.right_exit and \
+            self.top_exit <= y <= self.bottom_exit)
+
+        self.hover_snap = (self.left_snap <= x <= self.right_snap and \
+            self.top_snap <= y <= self.bottom_snap)
+        
+        if self.hover_exit and flags == 1:
+            global running
+            running = False
+
+        if self.hover_snap and flags == 1:
+            if flag == "Correct":
+                if len(face_locations) > 1:
+                     print(f"Detected more 1 faces in image, please make sure just 1 face in image")
+                else:
+                    update_face_image(frame_clone, face_locations, params_clone, name_student)
+
+                    # update_face_embed_vector(photonic_face_recognition, face_locations, params, name_student)
+                    known_face_encodings, known_face_names = photonic_face_recognition_clone.load_ground_truth_face_image_samples()
+                    params_clone["CLASSES"] = known_face_names
+            
+                    # save new embedded vector of new instance in `face-embedded-vector`.
+                    save_face_embed_vector(params_clone["TXT_FILE_DIR"], known_face_encodings, known_face_names)
+                    running = False
+            else:
+                print("Please move your face in the middle camera")
     
+    def draw_snapshot(self, frame):
+        if not self.hover_snap:
+            #cv2.circle(frame, (20,20), 10 , (0,0,255), -1)
+            cv2.rectangle(frame, (10,120), (100,170), (0,0,255), -1)
+            cv2.putText(frame, "Snapshot", (20,140), cv2.FONT_HERSHEY_PLAIN, 2 , (255,255,255), 2)
+        else:
+            cv2.rectangle(frame, (10,120), (100,170), (0,255,0), -1)
+            cv2.putText(frame, "Snapshot", (20,140), cv2.FONT_HERSHEY_PLAIN, 2 , (255,255,255), 2)
 
 def add_new_student_opencv(photonic_face_recognition, params):
     '''function is used for `Add new student` event'''
 
+    global running, photonic_face_recognition_clone, name_student, params_clone, \
+           frame_clone, face_locations, flag
+    running = True
+    photonic_face_recognition_clone = photonic_face_recognition
     name_student = input("Please enter name of new student: ")
     params["CLASSES"].append(name_student)
+    params_clone = params
     print(f"Hello {name_student}")
     
     # setup 
-    button = Button('QUIT', 0, 0, 100, 30)
+    button = Button()
     prev_frame_time = 0
     new_frame_time = 0
     video_capture = video_capture_mul_platform()
     process_this_frame = True
-    while True:
+    while running:
         # Grab a single frame of video
         _, frame = video_capture.read()
         
@@ -146,11 +183,19 @@ def add_new_student_opencv(photonic_face_recognition, params):
         # calculate FPS
         new_frame_time = time.time()
         fps = int(1 / (new_frame_time - prev_frame_time))
-        draw_fps_opencv(frame, fps)
+        if params["DRAW_FPS"]:
+            draw_fps_opencv(frame, fps)
         prev_frame_time = new_frame_time
         
+        button.draw_exit(frame)
+        button.draw_snapshot(frame)
+
         # Display the resulting image
         cv2.imshow('Video', frame)
+
+        # set mouse click
+        cv2.setMouseCallback("Video", button.events)
+
         key = cv2.waitKey(1)
         
         # press ENTER
@@ -189,7 +234,7 @@ def check_attendance_opencv(photonic_face_recognition, params):
     known_face_encodings = photonic_face_recognition.load_know_face_encodings(params["TXT_FILE_DIR"], known_face_names)
 
     # setup 
-    button = Button('QUIT', 0, 0, 100, 30)
+    button = Button()
     prev_frame_time = 0
     new_frame_time = 0
     video_capture = video_capture_mul_platform()
@@ -256,8 +301,8 @@ def check_attendance_opencv(photonic_face_recognition, params):
         # Display the resulting image
         cv2.imshow('Video', frame)
 
-        # set mouse clicl
-        cv2.setMouseCallback("Video", button.exit_event)
+        # set mouse click
+        cv2.setMouseCallback("Video", button.events)
 
         key = cv2.waitKey(1)
 
